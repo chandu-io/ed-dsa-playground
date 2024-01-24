@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ed-dsa-playground [exec:java]" type="MavenRunConfiguration" factoryName="Maven">
+  <configuration default="false" name="ed-dsa-playground [clean compile exec:java]" type="MavenRunConfiguration" factoryName="Maven">
     <MavenSettings>
       <option name="myGeneralSettings" />
       <option name="myRunnerSettings" />
@@ -11,6 +11,8 @@
           </option>
           <option name="goals">
             <list>
+              <option value="clean" />
+              <option value="compile" />
               <option value="exec:java" />
             </list>
           </option>

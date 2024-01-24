@@ -10,11 +10,6 @@ buildNumber.properties
 # https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
 
-src/main/resources/id_ed25519
-src/main/resources/id_ed25519.pub
-src/main/resources/id_ed448
-src/main/resources/id_ed448.pub
+src/main/resources/id_ed25519*
+src/main/resources/*.pem
 
-!.idea/runConfigurations/App.xml
-!.idea/runConfigurations/ed25519_playground__clean_package_.xml
-!.idea/runConfigurations/ed25519_playground__exec_java_.xml
