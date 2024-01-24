@@ -1,6 +1,5 @@
 package io.c6.eddsa.playground;
 
-import org.apache.commons.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.security.ec.ed.EdDSAOperations;
@@ -10,7 +9,6 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
-import java.security.PublicKey;
 import java.security.interfaces.EdECPrivateKey;
 import java.security.interfaces.EdECPublicKey;
 import java.security.spec.EdECPoint;
@@ -20,6 +18,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.NamedParameterSpec;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Scanner;
 import java.util.Set;
@@ -30,6 +29,7 @@ import java.util.stream.Collectors;
  *
  * @author Chandrasekhar Thotakura
  */
+@SuppressWarnings("unused")
 public class App {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
@@ -40,47 +40,40 @@ public class App {
 	 * @param args arguments
 	 */
 	public static void main(final String... args) {
-		extractPublicKeyFromPrivateKey();
+		deriveEdECPublicKeyFromEdECPrivateKey();
 	}
 
 	/**
 	 * Extract public key from private key
 	 */
-	public static void extractPublicKeyFromPrivateKey() {
+	public static void deriveEdECPublicKeyFromEdECPrivateKey() {
 		try {
-			var ed25519PvtKey = getResourceAsString("private.pem").trim();
-			LOGGER.info("ED25519 Private Key: \n{}", ed25519PvtKey);
-			ed25519PvtKey = trimPvtKey(ed25519PvtKey);
-			LOGGER.info("ED25519 Private Key: {}", ed25519PvtKey);
+			final var encodedEd25519PvtKey = extractPEMKeyContent(getResourceAsString("private.pem"));
+			LOGGER.info("Encoded ED25519 Private Key: {}", encodedEd25519PvtKey);
+			final var encodedEd25519PublicKey = extractPEMKeyContent(getResourceAsString("public.pem"));
+			LOGGER.info("Encoded ED25519 Private Key: {}", encodedEd25519PublicKey);
 
-//			var ed25519PvtKeyBytes = java.util.Base64.getDecoder().decode(ed25519PvtKey);
-			var ed25519PvtKeyBytes = Base64.decodeBase64(ed25519PvtKey);
-			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
-			ed25519PvtKeyBytes = Arrays.copyOfRange(ed25519PvtKeyBytes, 16, ed25519PvtKeyBytes.length);
-			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
-//			ed25519PvtKeyBytes = "277952d828c229d3186dff659c37c9d0ba05d78317873bee7e286d493da0889f".getBytes(StandardCharsets.UTF_8);
-//			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
-//			ed25519PvtKeyBytes = Base64.encodeBase64(ed25519PvtKeyBytes);
-//			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
-//			ed25519PvtKeyBytes = Base64.decodeBase64(ed25519PvtKeyBytes);
-//			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
-//			ed25519PvtKeyBytes = Hex.decodeHex(new String(ed25519PvtKeyBytes, StandardCharsets.UTF_8));
-//			LOGGER.info("ED25519 Private Key Bytes Length: {}\n{}", ed25519PvtKeyBytes.length, new String(ed25519PvtKeyBytes));
+			final var ed25519PvtKeyBytes = Base64.getDecoder().decode(encodedEd25519PvtKey);
+			LOGGER.info("ED25519 Private Key Bytes and Length: ({}) => {}", new String(ed25519PvtKeyBytes), ed25519PvtKeyBytes.length);
+			// trim first 16-bytes: https://xrpl.org/cryptographic-keys.html#ed25519-key-derivation
+			// https://stackoverflow.com/questions/77274300/convert-existing-ed25519-private-key-file-in-openssl-private-format-into-ssh-s#:~:text=For%20Ed25519%2C%20the%20last%2032,here%2C%20section%20OpenSSH%20Private%20Keys.
+			final var ed25519PvtKeyBytes2 = Arrays.copyOfRange(ed25519PvtKeyBytes, 16, ed25519PvtKeyBytes.length);
+			LOGGER.info("ED25519 Private Key Bytes and Length: ({}) => {}", new String(ed25519PvtKeyBytes2), ed25519PvtKeyBytes2.length);
 
-			final var edECPrivateKey = getEdECPrivateKey(ed25519PvtKeyBytes);
+			final var edECPrivateKey = getEdECPrivateKey(ed25519PvtKeyBytes2);
 			LOGGER.info("ED25519 Private Key: {}", edECPrivateKey);
-			LOGGER.info("ED25519 Private Key Algo: {}", edECPrivateKey.getAlgorithm());
-			ed25519PvtKeyBytes = edECPrivateKey.getBytes().orElse(new byte[0]);
+			// derive from the pvt key instance
+			final var ed25519PvtKeyBytes3 = edECPrivateKey.getBytes().orElseThrow();
 
-			final PublicKey ed25519PubKey1 = getEdDSAPublicKeyFromPrivateKey(NamedParameterSpec.ED25519, ed25519PvtKeyBytes);
-			final PublicKey ed25519PubKey2 = getEdDSAPublicKeyFromPrivateKey2(NamedParameterSpec.ED25519, ed25519PvtKeyBytes);
-			LOGGER.info("ED25519 Public Key1: \n{}", ed25519PubKey1.toString().trim());
-			LOGGER.info("ED25519 Public Key2: \n{}", ed25519PubKey2.toString().trim());
+			final var edECPublicKey = getEdECPublicKeyFromPrivateKey(NamedParameterSpec.ED25519, ed25519PvtKeyBytes3);
+			//final var edECPublicKey = getEdECPublicKeyFromPrivateKey2(NamedParameterSpec.ED25519, ed25519PvtKeyBytes3);
+			LOGGER.info("ED25519 Public Key: \n{}", edECPublicKey.toString().trim());
+			final var derivedEncodedEd25519PublicKey = Base64.getEncoder().encodeToString(edECPublicKey.getEncoded());
+			LOGGER.info("Derived encoded ED25519 Public Key: {}", derivedEncodedEd25519PublicKey);
 
-			String strPubKey1 = Base64.encodeBase64String(ed25519PubKey1.getEncoded());
-			String strPubKey2 = Base64.encodeBase64String(ed25519PubKey2.getEncoded());
-			LOGGER.info("ED25519 String Public Key1: {}", strPubKey1);
-			LOGGER.info("ED25519 String Public Key2: {}", strPubKey2);
+			if (!encodedEd25519PublicKey.equals(derivedEncodedEd25519PublicKey)) {
+				throw new RuntimeException("Derived EncodedEd25519PublicKey is invalid");
+			}
 		} catch (final Exception e) {
 			final var msg = Optional.ofNullable(e.getMessage()).orElse(">>>");
 			LOGGER.error(msg, e);
@@ -116,7 +109,7 @@ public class App {
 	 * @throws InvalidParameterSpecException invalid parameter spec exception
 	 */
 	@SuppressWarnings("SameParameterValue")
-	public static EdECPublicKey getEdDSAPublicKeyFromPrivateKey(final NamedParameterSpec spec, final byte[] pvtKey)
+	public static EdECPublicKey getEdECPublicKeyFromPrivateKey(final NamedParameterSpec spec, final byte[] pvtKey)
 			throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidParameterSpecException {
 		if (!Set.of(NamedParameterSpec.ED25519, NamedParameterSpec.ED448).contains(spec)) {
 			throw new InvalidParameterSpecException("Allowed NamedParameterSpec are ED25519 and ED448");
@@ -138,7 +131,7 @@ public class App {
 	 * @throws InvalidKeySpecException       invalid key spec exception
 	 * @throws InvalidParameterSpecException invalid parameter spec exception
 	 */
-	public static EdECPublicKey getEdDSAPublicKeyFromPrivateKey2(final NamedParameterSpec spec, final byte[] pvtKey)
+	public static EdECPublicKey getEdECPublicKeyFromPrivateKey2(final NamedParameterSpec spec, final byte[] pvtKey)
 			throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidParameterSpecException {
 		if (!Set.of(NamedParameterSpec.ED25519, NamedParameterSpec.ED448).contains(spec)) {
 			throw new InvalidParameterSpecException("Allowed NamedParameterSpec are ED25519 and ED448");
@@ -149,39 +142,87 @@ public class App {
 		return (EdECPublicKey) keyFactory.generatePublic(edECPublicKeySpec);
 	}
 
+	/**
+	 * Compute <code>EdECPoint</code> from the given private key binary
+	 *
+	 * @param pvtKey private key binary
+	 * @return EdECPoint
+	 */
 	public static EdECPoint computeEdECPoint(final byte[] pvtKey) {
 		final var pvtKeyCopy = Arrays.copyOf(pvtKey, pvtKey.length);
-		// determine if x was odd.
-		final var xOdd = (pvtKeyCopy[pvtKeyCopy.length - 1] & 255) >> 7 == 1;
-		// make sure most significant bit will be 0 - after reversing.
+		final var msb = pvtKeyCopy[pvtKeyCopy.length - 1];
+		final var xOdd = (msb & 255) >> 7 == 1;
 		pvtKeyCopy[pvtKeyCopy.length - 1] &= 127;
-		// apparently we must reverse the byte array...
 		reverse(pvtKeyCopy);
 		final var y = new BigInteger(1, pvtKeyCopy);
 		return new EdECPoint(xOdd, y);
 	}
 
-	public static void reverse(final byte[] array) {
-		if (array == null) {
-			return;
-		}
+	/**
+	 * Compute <code>EdECPoint</code> from the given private key binary
+	 * <p>
+	 * Inspired from <a href="https://github.com/openjdk/jdk/blob/jdk-17-ga/test/lib/jdk/test/lib/Convert.java#L64">openjdk tests</a>
+	 *
+	 * @param pvtKey private key binary
+	 * @return EdECPoint
+	 */
+	private static EdECPoint computeEdECPoint2(final byte[] pvtKey) {
+		final var pvtKeyCopy = Arrays.copyOf(pvtKey, pvtKey.length);
+		final var msb = pvtKeyCopy[pvtKeyCopy.length - 1];
+		final var xOdd = (msb & 0x80) != 0;
+		pvtKeyCopy[pvtKeyCopy.length - 1] &= (byte) 0x7F;
+		reverse(pvtKeyCopy);
+		final var y = new BigInteger(1, pvtKeyCopy);
+		return new EdECPoint(xOdd, y);
+	}
+
+	/**
+	 * Reverse the byte array
+	 *
+	 * @param arr input array
+	 */
+	public static void reverse(final byte[] arr) {
 		int i = 0;
-		int j = array.length - 1;
-		byte tmp;
-		while (j > i) {
-			tmp = array[j];
-			array[j] = array[i];
-			array[i] = tmp;
-			j--;
+		int j = arr.length - 1;
+		while (i < j) {
+			swap(arr, i, j);
 			i++;
+			j--;
 		}
 	}
 
-	public static String trimPvtKey(final String pvtKeyStr) {
-		return Arrays.stream(pvtKeyStr.split(System.lineSeparator()))
+	/**
+	 * Swap element in the array from the positions given
+	 *
+	 * @param arr input array
+	 * @param i   first position
+	 * @param j   second position
+	 */
+	public static void swap(final byte[] arr, final int i, final int j) {
+		byte tmp = arr[i];
+		arr[i] = arr[j];
+		arr[j] = tmp;
+	}
+
+	/**
+	 * Extract the Base64 encoded content from PEM string
+	 *
+	 * @param pemKeyStrWithPrefixAndSuffix PEM key string with prefix and suffix
+	 * @return PEM key string
+	 */
+	public static String extractPEMKeyContent(final String pemKeyStrWithPrefixAndSuffix) {
+		return Arrays.stream(pemKeyStrWithPrefixAndSuffix.split(System.lineSeparator()))
 				.filter(l -> !l.startsWith("-----")).collect(Collectors.joining());
 	}
 
+	/**
+	 * Create an instance of <code>EdECPrivateKey</code> from the given private key binary
+	 *
+	 * @param pvtKey private key binary
+	 * @return instance of <code>EdECPrivateKey</code>
+	 * @throws NoSuchAlgorithmException algorithm exception
+	 * @throws InvalidKeySpecException  key spec exception
+	 */
 	public static EdECPrivateKey getEdECPrivateKey(final byte[] pvtKey)
 			throws NoSuchAlgorithmException, InvalidKeySpecException {
 		final var edECPrivateKeySpec = new EdECPrivateKeySpec(NamedParameterSpec.ED25519, pvtKey);

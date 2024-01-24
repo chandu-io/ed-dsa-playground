@@ -3,7 +3,7 @@
 ## Generate the key for testing
 
 ```shell
-ssh-keygen -t ed25519 -f ./src/main/resources/id_ed25519 -C "john.doe@example.org"
+# ssh-keygen -t ed25519 -f ./src/main/resources/id_ed25519 -C "john.doe@example.org"
 
 openssl genpkey -algorithm ed25519 -outform pem -out ./src/main/resources/private.pem 
 openssl pkey -inform pem        -in ./src/main/resources/private.pem -pubout -out ./src/main/resources/public.pem

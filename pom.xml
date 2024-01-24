@@ -37,6 +37,7 @@
 			<version>${log4j.version}</version>
 		</dependency>
 
+<!--
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
@@ -52,6 +53,7 @@
 			<artifactId>bcprov-jdk18on</artifactId>
 			<version>1.77</version>
 		</dependency>
+-->
 
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
